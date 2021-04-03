@@ -1,0 +1,3 @@
+Source length (bytes):	30757
+Compressed length:	10251
+Compression ratio:	66.67%
