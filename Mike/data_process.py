@@ -7,7 +7,11 @@ FOLDER_NAME = "genome_compression_datasets"
 #####
 
 def benchmark(function, dataset=None, sample=None, data_dir=None, check_atcg=False):
-    
+    import os
+    import gzip
+    from Bio import SeqIO
+    import pandas as pd
+
     if dataset is None and data_dir is None:
         raise ValueError('Please specify data to compress.')
     elif dataset is not None and data_dir is not None:
@@ -60,6 +64,10 @@ def benchmark(function, dataset=None, sample=None, data_dir=None, check_atcg=Fal
         return agg_df
 
 def benchmark_functions(func_list, dataset=None, sample=None, data_dir=None, check_atcg=False, verbose=True):
+    import os
+    import gzip
+    from Bio import SeqIO
+    import pandas as pd
     # order preserved in python list
     df_list = []
     for f in func_list:
