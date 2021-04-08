@@ -89,8 +89,6 @@ def getDigits(byteInt, start, end):
 
 # rleEncode : string * int -> bytes
 # 
-# A simple RLE encoder.
-#  
 # Inputs:
 #   s            The input string. ***Must contain only A, C, G, and T, and
 #                must be of length greater than 2.***
@@ -136,7 +134,17 @@ def rleEncode(s, numLenBits):
                     res.pushInt(encoding[curr], 2)
                     res.pushInt(1, 1)
                     return bytes(res.get())
-            else:   # either curr != prev or runLength == maxRunLength
+            elif runLength == maxRunLength:
+                res.pushInt(runLength - 2, numLenBits)
+                res.pushInt(encoding[curr], 2)
+                if i == len(s) - 2 and s[-1] == s[-2]:
+                    # maxed out run, but there's two
+                    # consecutive characters at the end
+                    res.pushInt(encoding[s[-1]], 2)
+                    res.pushInt(0, numLenBits)
+                    res.pushInt(1, 1)
+                    return bytes(res.get())
+            else:   # curr != prev
                 res.pushInt(runLength - 2, numLenBits)
                 res.pushInt(encoding[curr], 2)
 
@@ -146,7 +154,7 @@ def rleEncode(s, numLenBits):
 
     res.pushInt(encoding[curr], 2)
     if curr == prev and prev != s[i - 2]:
-        # the extra extra special case: ends with run of length 2
+        # ends with run of length 2
         # never entered the inner run loop.
         res.pushInt(0, numLenBits)
     res.pushInt(1, 1)       # always ends with a meaningless 1
@@ -154,8 +162,6 @@ def rleEncode(s, numLenBits):
     return bytes(res.get())
 
 # rleDecode : bytes * int -> string
-# 
-# A simple RLE decoder.
 #  
 # Inputs:
 #   b            The input bytes object. Must have no zero padding at end,
@@ -211,7 +217,14 @@ def rleDecode(b, numLenBits):
 
 if __name__ == '__main__':
     # tests on a bunch of random strings
-    import random as r
-    for i in range(1000):
-        test = ''.join([r.choice('ACGT') for j in range(r.randrange(3,20))])
-        assert(test == rleDecode(rleEncode(test, 8), 8))
+    for lb in range(1, 9):
+        import random as r
+        for i in range(1000):
+            test = ''.join([r.choice('ACGT') for j in range(r.randrange(3,20))])
+            if not (test == rleDecode(rleEncode(test, lb), lb)):
+                print(test)
+
+    # test = 'CCCGG'
+    # cmpsd = rleEncode(test, 1)
+    # print(cmpsd.hex())
+    # print(rleDecode(cmpsd, 1))
