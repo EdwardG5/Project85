@@ -47,15 +47,6 @@ def bwrleCompress(s):
     postFooter = preFooter + zerolocbytes + numbytes
     return postFooter
 
-# helper function
-def annotate(L):
-    counts = dict.fromkeys('ACGT', 0)
-    result = []
-    for item in L:
-        result.append((item, counts[item]))
-        counts[item] += 1
-    return result
-
 # bwrleDecompress : bytes -> string
 # b is a bytes object that was returned by bwrleCompress,
 # using the same value for NUM_LEN_BITS.
@@ -69,9 +60,9 @@ def bwrleDecompress(b):
     # and insert $ character when necessary
     lastCol = np.empty(len(bwtNoEOF) + 1, dtype='<U1')
 
-    reqBytes = ((len(lastCol) - 2).bit_length() + 7) // 8
+    reqBytes = (((((len(lastCol) - 2).bit_length() + 7) // 8) + 3) // 4) * 4
     typeStr = '<u' + str(reqBytes)
-    occurrences = np.empty(len(lastCol), dtype=typeStr)
+    occurrences = np.empty(len(lastCol), dtype=typeStr)       # TODO find what's possible
     
     counts = dict.fromkeys('ACTG', 0)
     i = 0
@@ -100,6 +91,9 @@ def bwrleDecompress(b):
     res = ''
     while currChar != '$':
         res = currChar + res
+        if len(res) > 500005:
+            print(res[:50])
+            raise Exception
         i = firstOccurrence[currChar] + occurrences[i]
         currChar = lastCol[i]
     
@@ -118,6 +112,16 @@ def printBWProperties(s):
     print('test: ' + s)
     print('bwt:  ' + bwt)
     print()
+    return bwt
+
+def getBWT(s):
+    s = s + '$'
+    rotations = []
+    for i in range(len(s)):
+        rotations.append(s[i:] + s[:i])
+    rotations.sort()
+    bwt = ''.join([rot[-1] for rot in rotations])
+    return bwt
 
 def printStats(srcPath, resPath):
     with open(srcPath, 'rb') as f:

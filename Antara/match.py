@@ -3,13 +3,6 @@ import bwrle
 
 NUM_LEN_BITS = 1    # number of bits used to store run lengths
 
-
-
-# make your code modular!
-# no zerolocth entry!
-
-
-
 # quick helper
 # requires: 0 <= byteInt < 256, 0 <= start <= end <= 8
 # start and end indexed by zero from the left of the byte
@@ -24,9 +17,13 @@ def getDigits(byteInt, start, end):
 # upgrade by storing checkpointed suffix array data and
 # using results to find locations of patterns
 
-def match(b, pattern, C):
+def match(b, pattern, C, bwt):
+    ###########################################
+    # assemble auxiliary data
+    ###########################################
+
     zeroloc = int.from_bytes(b[-1 - b[-1]:-1], 'big')
-    raw = b[:-1 - b[-1]]; print(raw.hex())
+    raw = b[:-1 - b[-1]] # ; print(raw.hex())
     itoc = dict(zip(range(4), 'ACGT'))
     ctoi = dict(zip('ACGT', range(4)))
 
@@ -64,9 +61,10 @@ def match(b, pattern, C):
     nxcode = getDigits(raw[0], 2, 4)
     nx = itoc[nxcode]
     
+    # assemble counts
     while True:
-        # when we get here, p points to
-        # - beginning of singleton character
+        # when we get here, p points to either
+        # - beginning of singleton character, or
         # - beginning of run
 
         if ch != nx:    # ch is singleton
@@ -135,8 +133,7 @@ def match(b, pattern, C):
                     loc += 1
                 if loc % C == 0:
                     counts = np.vstack((counts, runningCts))
-                    countPtrs.append(p)     # TODO when you're checking if it's a run or not,
-                                            # take this edge case into account - can't check next when p + 2 is end
+                    countPtrs.append(p)
 
                 chcode = getCodeAt(p, 2)
                 runningCts[0,chcode] += 1
@@ -158,11 +155,6 @@ def match(b, pattern, C):
     # final row of counts table
     counts = np.vstack((counts[1:], runningCts))
 
-    print(counts)
-    print(countPtrs)
-    print(cOffsets)
-    print(loc)
-
     # assemble firstOccurrence
     firstOccurrence = {}
     sofar = 1
@@ -172,13 +164,10 @@ def match(b, pattern, C):
         firstOccurrence[itoc[charcode]] = sofar
         sofar += counts[-1,charcode]
 
-    print(firstOccurrence)
-
-
     # helper function to get the counts at a specific index
-    # REQUIRES: index < loc
+    # REQUIRES: index <= loc
     def getCounts(index, counts=counts, C=C):
-        assert(index < loc)
+        if index == loc: return counts[-1]
 
         # index is compatible with counts
 
@@ -195,8 +184,10 @@ def match(b, pattern, C):
         # either p starts at singleton, or p starts at run, or p is final char
         if p + 2 == end:
             # edge case; p points to the final character
-            # since the offset is nonzero, index must be
-            # zeroloc, and $ must be at the end.
+            if currLoc == zeroloc:
+                currLoc += 1
+                indexOffset -= 1
+                if indexOffset == 0: return res
             return counts[-1]
         
         # either p starts at singleton, or p starts at run
@@ -205,23 +196,28 @@ def match(b, pattern, C):
         ch = itoc[chcode]
         nx = itoc[nxcode]
 
-        if ch == nx:    # p starts at run; move by offset
+        if ch == nx:    # p starts at run; currLoc, res, and indexOffset are wrong
+                        # need to make them correct, using cof
             cof = cOffsets[currLoc]
             res[chcode] -= cof
-            indexOffset += cof
-            currLoc -= cof
 
-            if currLoc <= zeroloc < currLoc + cof:
+            if currLoc == zeroloc:
                 currLoc += 1
                 indexOffset -= 1
+            currLoc -= cof
+            indexOffset += cof
+            if currLoc <= zeroloc <= currLoc + cof:
+                currLoc -= 1
+                # res[chcode] += 1
+                indexOffset += 1
 
-        # just count up indexOffset times
+        # just count up indexOffset times, then return res
         while indexOffset > 0:
             if ch != nx:
                 if currLoc == zeroloc:
                     currLoc += 1
                     indexOffset -= 1
-                    if indexOffset == 0: break
+                    if indexOffset == 0: return res
 
                 res[chcode] += 1
 
@@ -232,7 +228,11 @@ def match(b, pattern, C):
                     chcode = getCodeAt(p, 2)
                     ch = itoc[chcode]
 
-                    if indexOffset == 0: return res
+                    if currLoc == zeroloc:
+                        currLoc += 1
+                        indexOffset -= 1
+
+                    if indexOffset <= 0: return res
                     else:
                         # $ is at end
                         res[chcode] += 1
@@ -252,10 +252,11 @@ def match(b, pattern, C):
                 zlhere = False
                 if currLoc <= zeroloc < currLoc + runLength:
                     # zeroloc is in the run (this will count before, but not after)
+                    # one of the positions in the run corresponds to zeroloc, rather
                     zlhere = True
                     if indexOffset < runLength + 1:
                         zerolocOffset = zeroloc - currLoc
-                        if indexOffset < zerolocOffset:
+                        if indexOffset <= zerolocOffset:
                             res[chcode] += indexOffset
                             return res
                         else:
@@ -276,123 +277,62 @@ def match(b, pattern, C):
                         if indexOffset == 0:
                             return res
 
-                        indexOffset -= 1
-                        currLoc += 1
                         chcode = getCodeAt(p, 2)
                         ch = itoc[chcode]
 
-                        if indexOffset == 0:
-                            return res
+                        if currLoc == zeroloc:
+                            currLoc += 1
+                            indexOffset -= 1
+
+                        if indexOffset <= 0: return res
                         else:
                             # $ is at end
                             res[chcode] += 1
                             return res
+
+                    if p == end:    # ends with run
+                        return counts[-1]
 
                     chcode = getCodeAt(p, 2)
                     nxcode = getCodeAt(p + 2, 2)
                     ch = itoc[chcode]
                     nx = itoc[nxcode]
                     continue
+        
         return res
 
     ###########################################
     # search for pattern occurrences
     ###########################################
 
-    # # init top & bottom pointers
-    # char = pattern[-1]
-    # pattern = pattern[:-1]
+    # init top & bottom pointers
+    char = pattern[-1]
+    pattern = pattern[:-1]
 
-    # top = firstOccurrence[char]
-    # bottom = top + counts[-1,ctoi[char]] - 1
+    top = firstOccurrence[char]
+    bottom = top + counts[-1,ctoi[char]] - 1
 
-    # print(top, bottom)
+    while len(pattern) > 0:
+        char = pattern[-1]
+        pattern = pattern[:-1]
 
-    # while len(pattern) > 0:
+        firstoc = getCounts(top)[ctoi[char]] + 1
+        lastoc = getCounts(bottom + 1)[ctoi[char]]
 
-    #     # want Counts[top,charcode] + 1 to get top occurrence of next char
-
-
-
-    #     char = pattern[-1]
-    #     pattern = pattern[:-1]
-
-    # numMatches = bottom - top + 1
-    # return numMatches
-
-
-
-import random as r
-test = ''.join([r.choice('ACTG') for _ in range(r.randint(3, 30))])
-
-
-
-
-
-# bwrle.printBWProperties(test)
-# pattern = 'A'
-# C = 4
-# print('test:', test, '\t pattern:', pattern, '\t C:', C)
-# print(match(bwrle.bwrleCompress(test), pattern, C))
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-#     while p <= end:
-#         if loc % C == 0: pass
-#         if loc == zeroloc: pass
-
-#         # when it reaches this point, this character is always either
-#         # - at the start of a run (curr != prev)
-#         # - at the start of a singleton character. (curr != prev)
-#         # - the second in two consecutive characters. (curr == prev)
-#         i = p // 8
-#         j = p % 8
-#         if j == 0: i -= 1; j = 8
-#         if j == 1:  # the char might be split across two bytes
-#             firstBit = getDigits(raw[i-1], 7, 8)
-#             secondBit = getDigits(raw[i], 0, 1)
-#             chcode = (firstBit << 1) + secondBit
-#             ch = itoc[chcode]
-#         else:
-#             chcode = getDigits(raw[i], j - 2, j)
-#             ch = itoc[chcode]
+        if firstoc > lastoc:    # no matches
+            return 0
         
-#         loc += 1                # index of the next one
-#         nextRow[1,chcode] += 1  # prepped for the next one
+        top = firstOccurrence[char] + firstoc
+        bottom = firstOccurrence[char] + lastoc
 
-#         if ch == prev:  # run
-#             p += NUM_LEN_BITS
-#             i = p // 8
-#             j = p % 8
-#             if j == 0: i -= 1; j = 8
-#             if j < NUM_LEN_BITS:  # might be split across two bytes
-#                 firstSeg = getDigits(raw[i-1], 8 + j - NUM_LEN_BITS, 8)
-#                 secondSeg = getDigits(raw[i], 0, j)
-#                 rl = (firstSeg << j) + secondSeg
-#             else:
-#                 rl = getDigits(raw[i], j - NUM_LEN_BITS, j)
-#             res += rl * ch
-#             justRan = True
-#         else:           # not a run, or at start of run
-#             pass
-        
-#         # prev = ch if not justRan else '\0'
-#         # p += 2
-#         # justRan = False
-#         # update ch and nx
+    numMatches = bottom - top + 1
+    return numMatches
 
+pattern = 'CA'
+C = 4
 
-
-# no zerolocth entry! is either within a run or not
+test = 'TCATAATCAGG'
+bwt = bwrle.getBWT(test)
+# print('test:', test, '\n bwt:', bwt, '\npattern:', pattern, '\nC:', C)
+print('test:', test, '\npattern:', pattern, '\nC:', C)
+print('returned: ', match(bwrle.bwrleCompress(test), pattern, C, bwt))
