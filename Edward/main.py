@@ -15,16 +15,20 @@ from multiprocessing import Pool
 from multiprocessing import get_context
 
 # Relative paths
-genomesPath = "GenomicData/0-10_genomes.fna"
+genomesPath = "GenomicData/0-10k_genomes.fna"
 referencePath = "GenomicData/COVID_Reference_Genome.fna"
 compressed_file_location = "GenomicData/CompressedData/0-10/"
 
 # Get reference
 reference = next(SeqIO.parse(referencePath, "fasta"))
 
+# reference, x.seq, x.filePath
 def transform(x):
-    print("Starting compression...")
-    return storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin")
+    print(f"Starting compression of {x[2]}")
+    info = getInfoFromString(reference, dna)
+    onezeroString = encodeInfo(info)
+    print(f"Finishing compression of {x[2]}")
+    return onezeroString
 
 p = print
 
@@ -51,19 +55,22 @@ if __name__ == '__main__':
         print(f"In parallel, using {cpu_count()} processors.")
     else:
         print(f"Sequentially.")
-    
+
     p("\nInitializing state...\n")
-    
+
     # Count already compressed
-    alreadyCompressed = listdir("GenomicData/CompressedData")
+    alreadyCompressed = listdir(compressed_file_location)
     alreadyCompressed = len(list(filter(lambda x: x[-4:] == ".bin", alreadyCompressed)))
-    
+
     # Fetch genomes
     data = SeqIO.parse(genomesPath, "fasta")
-    toCompress = list(itertools.islice(data, N+alreadyCompressed)) # This ensure safety if you give N > genomes available
-    N = len(toCompress)-alreadyCompressed
-    toCompress = map(lambda x: (x.seq, x.id), toCompress)
-    
+    toCompress = list(itertools.islice(data, N+alreadyCompressed)) # This ensures safety if you give N > genomes available
+    toCompress = map(lambda x: (x.seq, compressed_file_location+x.id+".bin"), toCompress)
+    toCompress = filter(lambda x: not os.path.exists(x[1]), toCompress)
+    toCompress = map(lambda x: (str(reference.seq), x[0], x[1]), toCompress)
+    toCompress = list(toCompress)
+    N = len(toCompress)
+
     # Begin compression
     p("Beginning compression...\n")
     start = time.time()
