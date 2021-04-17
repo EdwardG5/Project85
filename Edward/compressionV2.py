@@ -118,7 +118,7 @@ def getInfoFromString(reference, dna):
     dnaAligned, others = replaceOthers(refAligned, dnaAligned)
     mismatches = getMismatches(refAligned, dnaAligned)
     info = (insertions, deletions, ns, others, mismatches)
-    assert(getStringFromInfo(ref, *info) == dna)
+    assert(getStringFromInfo(reference, *info) == dna)
     return (insertions, deletions, ns, others, mismatches)
 
 # Helper for getStringFromInfo
