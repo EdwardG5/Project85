@@ -11,7 +11,7 @@ import argparse
 import itertools
 import os
 
-from compressionV2 import storeAsBinary, getInfoFromString
+from compressionV2 import storeAsBinary, getInfoFromString, encodeInfo
 from multiprocessing import Pool
 from multiprocessing import get_context
 
