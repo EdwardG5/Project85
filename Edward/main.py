@@ -26,15 +26,15 @@ reference = next(SeqIO.parse(referencePath, "fasta"))
 # toCompress = [ (0, ref, dna, path), (1, ref, dna, path), ...  ]
 def transform(x):
     ID, ref, dna, path = x
-    print(f"Starting compression of genome {ID}")
+    print(f"Starting compression of genome {ID}, {path[len(compressed_file_location):]}")
     try:
         info = getInfoFromString(ref, dna)
         onezeroString = encodeInfo(info)
-        print(f"Finishing compression of {ID}")
-        return (path, onezeroString)
+        print(f"Finishing compression of {ID}, {path[len(compressed_file_location):]}")
+        return (ID, path, onezeroString)
     except:
-        print(f"Something went wrong with genome {path}. Not storing.")
-        return (path, None)
+        print(f"Something went wrong with genome {ID}, {path[len(compressed_file_location):]}. Not storing.")
+        return (ID, path, None)
 
 
 p = print
@@ -88,14 +88,14 @@ if __name__ == '__main__':
         with get_context("spawn").Pool() as pool:
             returnValues = pool.map(transform, toCompress)
         print("\nBeginning storage of genomes, writing files...\n")
-        for (path, val) in returnValues:
-            print(f"Writing {path}...")
+        for (ID, path, val) in returnValues:
+            print(f"Writing {ID}, {path[len(compressed_file_location):]}...")
             if val != None:
                 r = writeToFile(path, val)
             if r == 0:
                 pass
             else:
-                print(f"Something went wrong while writing file {path}.")
+                print(f"Something went wrong while writing file {path[len(compressed_file_location):]}.")
         print("\nFinishing storage of genomes....\n")
         
     else:
@@ -105,17 +105,12 @@ if __name__ == '__main__':
     elapsedTime = end - start
 
     # Report back
-    if sum(returnValues) == 0:
-        if N == 1:
-            print(f"{N} genome was succesfully compressed.")
-        else:
-            print(f"{N} genomes were succesfully compressed.")
-        print(f"Total time: {round(elapsedTime, 2)}. Time per genome: {round(elapsedTime/N, 2)}")
+    if N == 1:
+        print(f"{N} genome was succesfully compressed.")
     else:
-        failed = enumerate(returnValues)
-        failed = filter(lambda x: x[1] != 0, failed)
-        failed = list(map(lambda x: x[0], failed))
-        print(f"Something went wrong. Genomes {failed} failed.")
+        print(f"{N} genomes were succesfully compressed.")
+    print(f"Total time: {round(elapsedTime, 2)}. Time per genome: {round(elapsedTime/N, 2)}")
+    
     p()
 
 

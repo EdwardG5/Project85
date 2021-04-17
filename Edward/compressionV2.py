@@ -340,12 +340,12 @@ assert(convertFromBinary(convertToBinary("11111")) == "11111")
 # the file has already been created. If it has, do nothing. Otherwise, create
 # the file, and store the info representation of the binary string. 
 def writeToFile(path, onezeroString):
-    if os.path.exists(fileName):
+    if os.path.exists(path):
         return 0
     else:
         bites = convertToBinary(onezeroString)
         try:
-            with open(fileName, "wb") as binary_file:
+            with open(path, "wb") as binary_file:
                 binary_file.write(bites)
             return 0
         except:
