@@ -339,12 +339,10 @@ assert(convertFromBinary(convertToBinary("11111")) == "11111")
 # Accepts a reference, a dna string, and a file identifier. First it checks if
 # the file has already been created. If it has, do nothing. Otherwise, create
 # the file, and store the info representation of the binary string. 
-def storeAsBinary(reference, dna, fileName):
+def writeToFile(path, onezeroString):
     if os.path.exists(fileName):
         return 0
     else:
-        info = getInfoFromString(reference, dna)
-        onezeroString = encodeInfo(info)
         bites = convertToBinary(onezeroString)
         try:
             with open(fileName, "wb") as binary_file:
@@ -352,6 +350,21 @@ def storeAsBinary(reference, dna, fileName):
             return 0
         except:
             return -1
+
+###########################################################################
+
+# We use the return convention the 0 = fine, -1 is error. 
+
+# Accepts a reference, a dna string, and a file identifier. First it checks if
+# the file has already been created. If it has, do nothing. Otherwise, create
+# the file, and store the info representation of the binary string. 
+def storeAsBinary(reference, dna, path):
+    if os.path.exists(path):
+        return 0
+    else:
+        info = getInfoFromString(reference, dna)
+        onezeroString = encodeInfo(info)
+        return writeToFile(path, onezeroString)
 
 ###########################################################################
 

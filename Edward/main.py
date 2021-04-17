@@ -11,7 +11,7 @@ import argparse
 import itertools
 import os
 
-from compressionV2 import storeAsBinary, getInfoFromString, encodeInfo
+from compressionV2 import storeAsBinary, getInfoFromString, encodeInfo, writeToFile
 from multiprocessing import Pool
 from multiprocessing import get_context
 
@@ -27,10 +27,15 @@ reference = next(SeqIO.parse(referencePath, "fasta"))
 def transform(x):
     ID, ref, dna, path = x
     print(f"Starting compression of genome {ID}")
-    info = getInfoFromString(ref, dna)
-    onezeroString = encodeInfo(info)
-    print(f"Finishing compression of {ID}")
-    return (path, onezeroString)
+    try:
+        info = getInfoFromString(ref, dna)
+        onezeroString = encodeInfo(info)
+        print(f"Finishing compression of {ID}")
+        return (path, onezeroString)
+    except:
+        print(f"Something went wrong with genome {path}. Not storing.")
+        return (path, None)
+
 
 p = print
 
@@ -82,9 +87,20 @@ if __name__ == '__main__':
     if PARALLEL:
         with get_context("spawn").Pool() as pool:
             returnValues = pool.map(transform, toCompress)
+        print("\nBeginning storage of genomes, writing files...\n")
+        for (path, val) in returnValues:
+            print(f"Writing {path}...")
+            if val != None:
+                r = writeToFile(path, val)
+            if r == 0:
+                pass
+            else:
+                print(f"Something went wrong while writing file {path}.")
+        print("\nFinishing storage of genomes....\n")
+        
     else:
-        print("Sequential code needs to be fixed, nothing will be done.")
-        # returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
+        # print("Sequential code needs to be fixed, nothing will be done.")
+        returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
     end = time.time()
     elapsedTime = end - start
 
