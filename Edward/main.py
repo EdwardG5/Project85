@@ -9,6 +9,7 @@ import timeit
 from os import listdir, cpu_count
 import argparse
 import itertools
+import os
 
 from compressionV2 import storeAsBinary, getInfoFromString
 from multiprocessing import Pool
@@ -25,7 +26,7 @@ reference = next(SeqIO.parse(referencePath, "fasta"))
 # reference, x.seq, x.filePath
 def transform(x):
     print(f"Starting compression of {x[2]}")
-    info = getInfoFromString(reference, dna)
+    info = getInfoFromString(x[0], x[1])
     onezeroString = encodeInfo(info)
     print(f"Finishing compression of {x[2]}")
     return onezeroString
