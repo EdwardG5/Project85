@@ -196,7 +196,9 @@ def encodeInsertions(insertions):
             # Note: This next step assumes that the insert is composed of ACTG. I just realised that because I called getInsertions before I did getOthers,
             # this may not necessarily be true.
             # FIX / TODO
-            insertInBinary = "".join(map(lambda x: encodeChar(x), list(insert)))
+            # insertInBinary = "".join(map(lambda x: encodeChar(x), list(insert))) 
+            # This was the original efficient version, using 2 bits per character. I changed it below to standard ASCII for ease. 
+            insertInBinary = "".join(map(lambda x: encodeNumber(ord(x), 8), list(insert))) # 
             s += insertInBinary
     else:
         s += "0"
