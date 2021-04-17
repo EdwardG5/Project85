@@ -10,6 +10,8 @@ from os import listdir, cpu_count
 import argparse
 import itertools
 import os
+from math import ceil
+import notify
 
 from compressionV2 import storeAsBinary, getInfoFromString, encodeInfo, writeToFile, getStringFromInfo
 from multiprocessing import Pool
@@ -85,24 +87,43 @@ if __name__ == '__main__':
     p("Beginning compression...\n")
     start = time.time()
     if PARALLEL:
-        with get_context("spawn").Pool() as pool:
-            returnValues = pool.map(transform, toCompress)
-        print("\nBeginning storage of genomes, writing files...\n")
-        for (ID, path, val) in returnValues:
-            print(f"Writing {ID}, {path[len(compressed_file_location):]}...")
-            if val != None:
-                r = writeToFile(path, val)
-            if r == 0:
-                pass
-            else:
-                print(f"Something went wrong while writing file {path[len(compressed_file_location):]}.")
-        print("\nFinishing storage of genomes....\n")
-        
+        # We compress and write the files in rounds of 1000. This means that if
+        # we need to stop the script, we don't throw away massive amounts of
+        # work. We also send an email notification to inform the user of
+        # progress.
+        for iteration in range(ceil(len(toCompress)/1000)):
+            part = toCompress[(iteration)*1000:(iteration+1)*1000]
+            with get_context("spawn").Pool() as pool:
+                returnValues = pool.map(transform, part)
+            print("\nBeginning storage of genomes, writing files...\n")
+            for (ID, path, val) in returnValues:
+                print(f"Writing {ID}, {path[len(compressed_file_location):]}...")
+                if val != None:
+                    r = writeToFile(path, val)
+                if r == 0:
+                    pass
+                else:
+                    print(f"Something went wrong while writing file {path[len(compressed_file_location):]}.")
+            print("\nFinishing storage of genomes....\n")
+            # Send an email notification.
+            msg = notify.message(
+                subject="Compression progress report",
+                text=(f'Another 1000 genomes compressed.\n'
+                    f'Only another {len(toCompress)-1000*(iteration+1)} to go!')
+            )
+            notify.send(msg)        
     else:
         # print("Sequential code needs to be fixed, nothing will be done.")
         returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
     end = time.time()
     elapsedTime = end - start
+
+    # Send an email notification.
+    msg = notify.message(
+        subject="Compression progress report: COMPLETE",
+        text=(f'All genomes compressed. Time for the next batch!\n')
+    )
+    notify.send(msg)
 
     # Report back
     if N == 1:
