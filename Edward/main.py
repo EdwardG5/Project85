@@ -23,13 +23,14 @@ compressed_file_location = "GenomicData/CompressedData/0-10/"
 # Get reference
 reference = next(SeqIO.parse(referencePath, "fasta"))
 
-# reference, x.seq, x.filePath
+# toCompress = [ (0, ref, dna, path), (1, ref, dna, path), ...  ]
 def transform(x):
-    print(f"Starting compression of {x[2]}")
-    info = getInfoFromString(x[0], x[1])
+    ID, ref, dna, path = x
+    print(f"Starting compression of genome {ID}")
+    info = getInfoFromString(ref, dna)
     onezeroString = encodeInfo(info)
-    print(f"Finishing compression of {x[2]}")
-    return onezeroString
+    print(f"Finishing compression of {ID}")
+    return (path, onezeroString)
 
 p = print
 
@@ -68,8 +69,11 @@ if __name__ == '__main__':
     toCompress = list(itertools.islice(data, N+alreadyCompressed)) # This ensures safety if you give N > genomes available
     toCompress = map(lambda x: (x.seq, compressed_file_location+x.id+".bin"), toCompress)
     toCompress = filter(lambda x: not os.path.exists(x[1]), toCompress)
-    toCompress = map(lambda x: (str(reference.seq), x[0], x[1]), toCompress)
+    toCompress = enumerate(toCompress)
+    toCompress = map(lambda x: (x[0], str(reference.seq), x[1][0], x[1][1]), toCompress)
     toCompress = list(toCompress)
+    # toCompress = [ (0, ref, dna, path), (1, ref, dna, path), ...  ]
+    
     N = len(toCompress)
 
     # Begin compression
@@ -79,7 +83,8 @@ if __name__ == '__main__':
         with get_context("spawn").Pool() as pool:
             returnValues = pool.map(transform, toCompress)
     else:
-        returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
+        print("Sequential code needs to be fixed, nothing will be done.")
+        # returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
     end = time.time()
     elapsedTime = end - start
 
