@@ -103,8 +103,13 @@ def getMismatches(refAligned, dnaAligned):
 assert(getMismatches("AAACCC", "ATACTC") == [(1, "T"), (4, "T")])
 
 
-# Accepts a reference and another dna molecule. 
-# Returns a list of positions where there were insertions, deletions, Ns, other characters, and mismatches
+# Accepts a reference and another dna molecule. Returns a list of positions
+# where there were insertions, deletions, Ns, other characters, and mismatches.
+# This function raises an error if applying the getStringFromInfo inverse
+# function does not return the original string. This could be because the
+# encoding is broken of that the inverse is broken. Either way, something has
+# gone wrong and this ensures that the user is alerted to the issue and won't
+# use the incorrect results assuming that they are correct.
 def getInfoFromString(reference, dna):
     refAligned, dnaAligned = align(reference, dna)
     refAligned, dnaAligned, insertions = getInsertions(refAligned, dnaAligned)
@@ -112,6 +117,8 @@ def getInfoFromString(reference, dna):
     dnaAligned, ns = replaceNs(refAligned, dnaAligned)
     dnaAligned, others = replaceOthers(refAligned, dnaAligned)
     mismatches = getMismatches(refAligned, dnaAligned)
+    info = (insertions, deletions, ns, others, mismatches)
+    assert(getStringFromInfo(ref, *info) == dna)
     return (insertions, deletions, ns, others, mismatches)
 
 # Helper for getStringFromInfo
