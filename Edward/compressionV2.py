@@ -82,7 +82,7 @@ def replaceOthers(refAligned, dnaAligned):
     indels = []
     dnaAligned = list(dnaAligned)
     for i in range(len(dnaAligned)):
-        if dnaAligned[i] not in ["A", "C", "T", "G"]:
+        if dnaAligned[i] not in ["A", "C", "T", "G", "-", "N"]:
             indels.append((i, dnaAligned[i]))
             dnaAligned[i] = refAligned[i]
     dnaAligned = "".join(dnaAligned)
@@ -106,11 +106,11 @@ assert(getMismatches("AAACCC", "ATACTC") == [(1, "T"), (4, "T")])
 # Accepts a reference and another dna molecule. 
 # Returns a list of positions where there were insertions, deletions, Ns, other characters, and mismatches
 def getInfoFromString(reference, dna):
-    refAligned, dnaAligned = align(reference, dna)
+    dnaAligned, others = replaceOthers(reference, dna)
+    refAligned, dnaAligned = align(reference, dnaAligned)
+    dnaAligned, ns = replaceNs(refAligned, dnaAligned)
     refAligned, dnaAligned, insertions = getInsertions(refAligned, dnaAligned)
     dnaAligned, deletions = getDeletions(refAligned, dnaAligned)
-    dnaAligned, ns = replaceNs(refAligned, dnaAligned)
-    dnaAligned, others = replaceOthers(refAligned, dnaAligned)
     mismatches = getMismatches(refAligned, dnaAligned)
     return (insertions, deletions, ns, others, mismatches)
 
@@ -134,22 +134,29 @@ def getStringFromInfo(reference, insertions, deletions, ns, others, mismatches):
     # Insert the mismatches
     for (i, l) in mismatches:
         dna[i] = l
-    # Replace the strange characters
-    for (i, l) in others:
-        dna[i] = l
-    # Replace the Ns
-    for (startingPosition, length) in ns:
-        dna[startingPosition:startingPosition+length] = ["N" for _ in range(length)]
     # Delete the inserted parts
     for (startingPosition, length) in deletions:
         dna[startingPosition:startingPosition+length] = ["-" for _ in range(length)]
     # Fix the insertions
     dna = redoInsertions(dna, insertions)
     # Now remove the "-"s. 
-    dna = filter(lambda x: x != "-", dna)
+    dna = list(filter(lambda x: x != "-", dna))
+    # Replace the strange characters
+    for (i, l) in others:
+        dna[i] = l
+    # Replace the Ns
+    for (startingPosition, length) in ns:
+        dna[startingPosition:startingPosition+length] = ["N" for _ in range(length)]
     # Done : ). 
     return "".join(dna)
 
+# GGGTTT
+# TTTYSGGGGGGGTTTTT
+
+info = getInfoFromString("GGGTTT", "TTTYSGGGG")
+s = getStringFromInfo("GGGTTT", *info)
+print(s)
+assert(s == "TTTYSGGGG")
 
 ###########################################################################
 
@@ -415,10 +422,3 @@ def storeAsBinary(reference, dna, fileName):
 # # """
 
 # print("All tests passed\n\n")
-
-
-
-
-
-
-
