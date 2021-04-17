@@ -12,16 +12,18 @@ import itertools
 
 from compressionV2 import storeAsBinary, getInfoFromString
 from multiprocessing import Pool
+from multiprocessing import get_context
 
 # Relative paths
-genomesPath = "GenomicData/85k_COVID_Genomes.fna"
+genomesPath = "GenomicData/0-10_genomes.fna"
 referencePath = "GenomicData/COVID_Reference_Genome.fna"
-compressed_file_location = "GenomicData/CompressedData/"
+compressed_file_location = "GenomicData/CompressedData/0-10/"
 
 # Get reference
 reference = next(SeqIO.parse(referencePath, "fasta"))
 
 def transform(x):
+    print("Starting compression...")
     return storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin")
 
 p = print
@@ -66,7 +68,8 @@ if __name__ == '__main__':
     p("Beginning compression...\n")
     start = time.time()
     if PARALLEL:
-        returnValues = Pool().map(transform, toCompress)
+        with get_context("spawn").Pool() as pool:
+            returnValues = pool.map(transform, toCompress)
     else:
         returnValues = list(map(lambda x: storeAsBinary(reference.seq, x[0], compressed_file_location+x[1]+".bin"), toCompress))
     end = time.time()
