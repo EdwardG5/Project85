@@ -1,7 +1,6 @@
+from params import getTypeSize
 import rle
 import numpy as np
-
-NUM_LEN_BITS = 1    # number of bits used to store run lengths
 
 # bwrleCompress : string -> bytes
 # s may only contain A, C, G, T.
@@ -12,7 +11,6 @@ def bwrleCompress(s):
         def __eq__(self, other):        # for finding zeroloc
             return self.loc == other
         def __lt__(self, other):        # for sorting
-            # if self.loc == other.loc: return False  # never happens? TODO
             if self.loc == len(s): return True
             if other.loc == len(s): return False
             offset = 0
@@ -23,17 +21,16 @@ def bwrleCompress(s):
                 if other.loc + offset == len(s):  # other has $ first
                     return False
             return s[self.loc + offset] < s[other.loc + offset]
-        # def __repr__(self):                     # for debugging purposes
-        #     return 'L' + str(self.loc)
 
     locs = list(map(Loc, list(range(len(s) + 1))))
     locs = sorted(locs)     # locs can be thought of as a representation
                             # of the sorted M array.
+
     zeroloc = locs.index(0)
     del locs[zeroloc]
     
     bwt = ''.join([s[locs[i].loc - 1] for i in range(len(s))])
-    preFooter = rle.rleEncode(bwt, NUM_LEN_BITS)
+    preFooter = rle.rleEncode(bwt)
 
     zls = hex(zeroloc).lstrip('0x')         # !! strips 0 and x sep
     if len(zls) % 2 != 0: zls = '0' + zls   # has to be bytes
@@ -43,7 +40,7 @@ def bwrleCompress(s):
                                             # in a byte (>256)
                                             # numbytes might be zero, if
                                             # zeroloc is zero
-    
+
     postFooter = preFooter + zerolocbytes + numbytes
     return postFooter
 
@@ -53,20 +50,20 @@ def bwrleCompress(s):
 def bwrleDecompress(b):
     zeroloc = int.from_bytes(b[-1 - (b[-1]):-1], 'big')
     withoutFooter = b[:-1 - (b[-1])]
-    bwtNoEOF = rle.rleDecode(withoutFooter, NUM_LEN_BITS)
+    bwt = rle.rleDecode(withoutFooter)
 
     # assemble array representing the BWT
     # collect total count information, occurrences information,
     # and insert $ character when necessary
-    lastCol = np.empty(len(bwtNoEOF) + 1, dtype='<U1')
+    lastCol = np.empty(len(bwt) + 1, dtype='<U1')
 
-    reqBytes = (((((len(lastCol) - 2).bit_length() + 7) // 8) + 3) // 4) * 4
+    reqBytes = getTypeSize(((len(lastCol) - 2).bit_length() + 7) // 8)
     typeStr = '<u' + str(reqBytes)
-    occurrences = np.empty(len(lastCol), dtype=typeStr)       # TODO find what's possible
+    occurrences = np.empty(len(lastCol), dtype=typeStr)
     
     counts = dict.fromkeys('ACTG', 0)
     i = 0
-    for char in bwtNoEOF:
+    for char in bwt:
         if i == zeroloc:
             lastCol[i] = '$'
             occurrences[i] = 0
@@ -91,58 +88,22 @@ def bwrleDecompress(b):
     res = ''
     while currChar != '$':
         res = currChar + res
-        if len(res) > 500005:
-            print(res[:50])
-            raise Exception
         i = firstOccurrence[currChar] + occurrences[i]
         currChar = lastCol[i]
     
     return res
 
-# for debugging purposes
-def printBWProperties(s):
-    s = s + '$'
-    rotations = []
-    for i in range(len(s)):
-        rotations.append(s[i:] + s[:i])
-    rotations.sort()
-    bwt = ''.join([rot[-1] for rot in rotations])
-    for rotation in rotations: print(rotation)
-    print()
-    print('test: ' + s)
-    print('bwt:  ' + bwt)
-    print()
-    return bwt
-
-def getBWT(s):
-    s = s + '$'
-    rotations = []
-    for i in range(len(s)):
-        rotations.append(s[i:] + s[:i])
-    rotations.sort()
-    bwt = ''.join([rot[-1] for rot in rotations])
-    return bwt
-
-def printStats(srcPath, resPath):
-    with open(srcPath, 'rb') as f:
-        sl = len(f.read())
-    with open(resPath, 'rb') as f:
-        rl = len(f.read())
-    
-    print('Source length (bytes):\t' + str(sl))
-    print('Compressed length:\t' + str(rl))
-    print('Compression ratio:\t' + ('%.2f' % (100 * (1 - rl/sl))) + '%')
-
-if __name__ == '__main__':
+def randomTests(n):
     # tests on a bunch of random strings
-    for i in range(100):
+    for _ in range(n):
         test = ''.join(np.random.choice(list('ACTG'), np.random.randint(3, 71)))
         try:
-            if (test != bwrleDecompress(bwrleCompress(test))):
-                print(test)
+            if (test != bwrleDecompress(bwrleCompress(test))): print(test)
         except Exception:
-            print(test)
-            assert(False)
+            print(test); assert(False)
+
+if __name__ == '__main__':
+    randomTests(1000)
 
     # test = 'AAAAA'
     # printBWProperties(test)

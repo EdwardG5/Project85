@@ -1,17 +1,8 @@
+from params import NUM_LEN_BITS, C, itoc, ctoi
+from params import getDigits, getFirstOccurrence
+from params import printBWSAProperties
 import numpy as np
-import bwrle
-
-NUM_LEN_BITS = 1    # number of bits used to store run lengths
-
-# encoding helpers
-itoc = dict(zip(range(4), 'ACGT'))
-ctoi = dict(zip('ACGT', range(4)))
-
-# requires: 0 <= byteInt < 256, 0 <= start <= end <= 8
-# start and end indexed by zero from left of byte represented by byteInt
-def getDigits(byteInt, start, end):
-    byteInt >>= 8 - end
-    return byteInt & ~(-1 << (end - start))
+import bwrleCF
 
 # extracts info from compressed data.
 # takes bytearray, returns info tuple
@@ -151,22 +142,9 @@ def assembleCounts(zeroloc, end, getCodeAt):
 
     return counts, cOffsets, countPtrs, loc
 
-def getFirstOccurrence(totCounts):
-    firstOccurrence = {}
-    sofar = 1
-    firstOccurrence['A'] = sofar
-    sofar += totCounts[0]
-    for charcode in range(1,4):
-        firstOccurrence[itoc[charcode]] = sofar
-        sofar += totCounts[charcode]
-    return firstOccurrence
-
-# match : (bytes * string) -> int
-#                             int list
-# start with returning an int representing number of patterns,
-# upgrade by storing checkpointed suffix array data and
-# using results to find locations of patterns
-def match(b, pattern, C):
+# returns number of occurrences of pattern
+# in compressed data stored in b
+def occurrences(b, pattern):
     zeroloc, end, getCodeAt = extractInfo(bytearray(b))
     
     ###########################################
@@ -313,83 +291,8 @@ def match(b, pattern, C):
         
         return res
 
-    # helper function to get the character of BWT at a specific index
-    # REQUIRES: index <= bwlen
-    def getCharAt(index):
-        if index == zeroloc: return '$'
-        
-        if index % C == 0:
-            p = countPtrs[index // C]
-            return itoc[getCodeAt(p, 2)]
-        
-        # otherwise...
-        p = countPtrs[index // C]
-        indexOffset = index % C         # guaranteed nonzero
-        currLoc = index - indexOffset
-
-        chcode = getCodeAt(p, 2)
-        ch = itoc[chcode]
-
-        if p + 2 == end: return ch
-
-        nxcode = getCodeAt(p + 2, 2)
-        nx = itoc[nxcode]
-
-        if ch == nx:        # if p starts at run, need to adjust based on cof
-            cof = cOffsets[currLoc]
-            currLoc -= cof
-            indexOffset += cof
-
-            if currLoc <= zeroloc < currLoc + cof:
-                currLoc -= 1
-                indexOffset += 1
-
-        # just count up indexOffset times
-        while indexOffset > 0:
-            if ch != nx:    # p at singleton
-                if currLoc == zeroloc:
-                    currLoc += 1
-                    indexOffset -= 1
-                    if indexOffset == 0: return ch
-
-                indexOffset -= 1
-                currLoc += 1
-
-                p += 2
-                chcode = nxcode
-                ch = nx
-                if p + 2 == end: return ch
-                nxcode = getCodeAt(p + 2, 2)
-                nx = itoc[nxcode]
-                continue
-            else:           # p at run
-                runLength = getCodeAt(p + 4, NUM_LEN_BITS) + 2
-
-                zlhere = False
-                if currLoc <= zeroloc < currLoc + runLength:   # includes before the run, not after
-                    zlhere = True
-
-                if indexOffset < runLength + int(zlhere):
-                    return ch
-                
-                # otherwise
-                indexOffset -= (runLength + int(zlhere))
-                currLoc += runLength + int(zlhere)
-
-                p += 4 + NUM_LEN_BITS
-                if p == end: # impossible
-                    raise IndexError
-                chcode = getCodeAt(p, 2)
-                ch = itoc[chcode]
-                if p + 2 == end:
-                    return ch
-                nxcode = getCodeAt(p + 2, 2)
-                nx = itoc[nxcode]
-                continue
-        return ch
-
     ###########################################
-    # search for pattern occurrences
+    # search for pattern occurrence #
     ###########################################
 
     # init top & bottom pointers
@@ -414,25 +317,3 @@ def match(b, pattern, C):
 
     numMatches = bottom - top + 1
     return numMatches
-
-testPattern = 'AG'
-C = 4
-
-testStr = 'GCTAGAG'
-# testStr = ''.join([np.random.choice(list('ACGT')) for _ in range(np.random.randint(3,15))])
-
-# for _ in range(10000):
-if True:
-    try:
-        bwt = bwrle.getBWT(testStr)
-        # bwt = bwrle.printBWProperties(testStr)
-
-        print('test:', testStr, '\nbwt: ', bwt, '\npattern:', testPattern, '\nC:', C)
-        print()
-        print('returned: ', match(bwrle.bwrleCompress(testStr), testPattern, C))
-        # match(bwrle.bwrleCompress(testStr), testPattern, C)
-
-        # testStr = ''.join([np.random.choice(list('ACGT')) for _ in range(np.random.randint(3,15))])
-    except Exception:
-        print(testStr, bwt)
-        assert(False)
