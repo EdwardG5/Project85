@@ -1,6 +1,7 @@
-from params import getTypeSize
+from params import getTypeSize, removeNonACGT
 import rle
 import numpy as np
+from sys import argv
 
 # bwrleCompress : string -> bytes
 # s may only contain A, C, G, T.
@@ -103,19 +104,26 @@ def randomTests(n):
             print(test); assert(False)
 
 if __name__ == '__main__':
-    randomTests(1000)
-
-    # test = 'AAAAA'
-    # printBWProperties(test)
-    # cmpsd = bwrleCompress(test)
-    # print(cmpsd.hex())
-    # print(bwrleDecompress(cmpsd))
-
-    # with open('SC2genome.txt') as f:
-    #     content = f.read()
-    #     cmpsd = bwrleCompress(content)
-    # with open('SC2cmpsd', 'wb') as f:
-    #     f.write(cmpsd)
-    # with open('SC2decmpsd.txt', 'w') as f:
-    #     f.write(bwrleDecompress(cmpsd))
-    # printStats('SC2genome.txt', 'SC2cmpsd')
+    if len(argv) != 4 or (argv[1] != '-c' and argv[1] != '-d'):
+        print('Usage: python bwrleCF.py -c/-d ' +
+              '[source filename] [destination filename]')
+    elif argv[1] == '-c':
+        print('Compressing ' + argv[2] + '...')
+        with open(argv[2]) as f:
+            s = f.read()
+        newS, nlct, loct, othct = removeNonACGT(s)
+        if nlct or loct or othct:
+            print('Made '+str(loct)+' lowercase nucleotides uppercase, '+
+                  'and removed '+str(nlct + othct)+' non-ACGT characters, '+
+                  str(nlct)+' of which are newlines and '+str(othct)+' of '+
+                  'which are not.')
+        with open(argv[3], 'wb') as f:
+            f.write(bwrleCompress(newS))
+        print('Successful.')
+    else:
+        print('Decompressing ' + argv[2] + '...')
+        with open(argv[2], 'rb') as f:
+            b = f.read()
+        with open(argv[3], 'w') as f:
+            f.write(bwrleDecompress(b))
+        print('Successful.')

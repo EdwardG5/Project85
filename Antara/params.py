@@ -107,3 +107,46 @@ def getFirstOccurrence(totCounts):
         firstOccurrence[itoc[charcode]] = sofar
         sofar += totCounts[charcode]
     return firstOccurrence
+
+def removeNonACGT(s):
+    nlCount = 0
+    lowerCount = 0
+    otherCount = 0
+    toRemove = []; lowercase = []
+
+    # collect info in one pass
+    for i in range(len(s)):
+        if s[i] not in 'ACGT':
+            if s[i] in 'acgt':
+                lowerCount += 1
+                lowercase.append(i)
+            elif s[i] == '\n':
+                nlCount += 1
+                toRemove.append(i)
+            else:
+                otherCount += 1
+                toRemove.append(i)
+
+    # construct result string in one pass
+    res = ''
+    start = 0
+    while toRemove and lowercase:
+        if toRemove[0] < lowercase[0]:
+            ri = toRemove.pop(0)
+            res += s[start:ri]
+            start = ri + 1
+        else:
+            lc = lowercase.pop(0)
+            res += s[start:lc] + s[lc].upper()
+            start = lc + 1
+    for ri in toRemove:
+        res += s[start:ri]
+        start = ri + 1
+    for lc in lowercase:
+        res += s[start:lc] + str(s[lc].upper())
+        start = lc + 1
+
+    # add the rest
+    res += s[start:]
+
+    return res, nlCount, lowerCount, otherCount

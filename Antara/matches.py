@@ -1,8 +1,9 @@
 from params import ENDIANNESS, NUM_LEN_BITS, K, C, itoc, ctoi
-from params import getDigits, getFirstOccurrence
+from params import getDigits, getFirstOccurrence, removeNonACGT
 from params import printBWProperties
 import numpy as np
 import bwrleFF
+from sys import argv
 
 # extracts info from compressed data.
 # takes bytearray, returns info tuple
@@ -454,4 +455,26 @@ def testRandom(n):
             assert(False)
 
 if __name__ == '__main__':
-    testRandom(100)
+    if len(argv) != 4:
+        print('Usage: python matches.py [compressed file name] [pattern file name] [destination file name]')
+    else:
+        print('Retrieving data...')
+        with open(argv[1], 'rb') as f:
+            b = f.read()
+        with open(argv[2]) as f:
+            pattern, nlct, loct, othct = removeNonACGT(f.read())
+            if nlct or loct or othct:
+                print('In ' + argv[2] + ', made '+str(loct)+' lowercase nucleotides uppercase, '+
+                    'and removed '+str(nlct + othct)+' non-ACGT characters, '+
+                    str(nlct)+' of which are newlines and '+str(othct)+' of '+
+                    'which are not.')
+        
+        print('Finding matches...')
+        matches = match(b, pattern)
+
+        print('Writing result to file...')
+        with open(argv[3], 'w') as f:
+            f.write(str(matches[0]))
+            for m in matches[1:]:
+                f.write('\n' + str(m))
+        print('Successful.')
