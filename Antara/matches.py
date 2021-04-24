@@ -474,7 +474,9 @@ if __name__ == '__main__':
 
         print('Writing result to file...')
         with open(argv[3], 'w') as f:
-            f.write(str(matches[0]))
-            for m in matches[1:]:
-                f.write('\n' + str(m))
+            if len(matches) == 0: f.write('No matches found.')
+            else:
+                f.write(str(matches[0]))
+                for m in matches[1:]:
+                    f.write('\n' + str(m))
         print('Successful.')
