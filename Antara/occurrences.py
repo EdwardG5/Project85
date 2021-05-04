@@ -1,3 +1,9 @@
+
+
+###############################################
+# don't include this file in paper
+###############################################
+
 from params import NUM_LEN_BITS, C, itoc, ctoi
 from params import getDigits, getFirstOccurrence
 from params import printBWSAProperties

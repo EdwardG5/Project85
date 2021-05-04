@@ -1,3 +1,10 @@
+
+
+###############################################
+# don't include this file in paper
+###############################################
+
+
 from params import getTypeSize, removeNonACGT
 import rle
 import numpy as np

@@ -23,8 +23,6 @@ def bwrleCompress(s):
                 if other.loc + offset == len(s):  # other has $ first
                     return False
             return s[self.loc + offset] < s[other.loc + offset]
-        # def __repr__(self):
-        #     return 'L' + str(self.loc)
 
     locs = list(map(Loc, list(range(len(s) + 1))))
     locs = sorted(locs)     # locs can be thought of as a representation
@@ -51,10 +49,10 @@ def bwrleCompress(s):
 
     sufarrbytes = bytearray()
     for i in range(0, len(sufarrBackwards)):
-        sufarrbytes += int.to_bytes(sufarrBackwards[i * 5], bpv, ENDIANNESS)
+        sufarrbytes += int.to_bytes(sufarrBackwards[i * K], bpv, ENDIANNESS)
     salenbytes = int.to_bytes(len(sufarrBackwards), bpv, ENDIANNESS)
     bpvbyte = int.to_bytes(bpv, 1, ENDIANNESS)
-    kbyte = int.to_bytes(K, 1, ENDIANNESS)
+    kbyte = int.to_bytes(0, 1, ENDIANNESS)  # TODO remove
 
     postFooter = preFooter + sufarrbytes + salenbytes + \
                  bpvbyte + kbyte
@@ -66,7 +64,6 @@ def bwrleCompress(s):
 def bwrleDecompress(b):
     # extract necessary information from footer
     # and isolate raw BWT encoding
-    assert(K == b[-1])  # K should be the same as global K
     bpv = b[-2]
     salen = int.from_bytes(b[-2 - bpv:-2], ENDIANNESS)
     sastart = -2 - bpv - (bpv * salen)
@@ -115,6 +112,51 @@ def bwrleDecompress(b):
     
     return res
 
+def compress(src, dest):
+    print('Compressing ' + src + '...')
+    with open(src) as f:
+        s = f.read()
+    newS, nlct, loct, othct = removeNonACGT(s)
+    if nlct or loct or othct:
+        print('Made '+str(loct)+' lowercase nucleotides uppercase, '+
+                'and removed '+str(nlct + othct)+' non-ACGT characters, '+
+                str(nlct)+' of which are newlines and '+str(othct)+' of '+
+                'which are not.')
+    with open(dest, 'wb') as f:
+        f.write(bwrleCompress(newS))
+    print('Successful.')
+
+def decompress(src, dest):
+    print('Decompressing ' + src + '...')
+    with open(src, 'rb') as f:
+        b = f.read()
+    with open(dest, 'w') as f:
+        f.write(bwrleDecompress(b))
+    print('Successful.')
+
+if __name__ == '__main__':
+    if len(argv) != 4 or (argv[1] != '-c' and argv[1] != '-d'):
+        print('Usage: python bwrleFF.py -c/-d ' +
+              '[source filename] [destination filename]')
+    elif argv[1] == '-c':
+        compress(argv[2], argv[3])
+    else:
+        decompress(argv[2], argv[3])
+
+
+
+
+
+
+
+
+
+
+
+###############################################
+# from here onward, don't include in paper
+###############################################
+
 # tests on n random strings
 def testRandom(n):
     for _ in range(n):
@@ -126,27 +168,6 @@ def testRandom(n):
             print(test)
             assert(False)
 
-if __name__ == '__main__':
-    if len(argv) != 4 or (argv[1] != '-c' and argv[1] != '-d'):
-        print('Usage: python bwrleFF.py -c/-d ' +
-              '[source filename] [destination filename]')
-    elif argv[1] == '-c':
-        print('Compressing ' + argv[2] + '...')
-        with open(argv[2]) as f:
-            s = f.read()
-        newS, nlct, loct, othct = removeNonACGT(s)
-        if nlct or loct or othct:
-            print('Made '+str(loct)+' lowercase nucleotides uppercase, '+
-                  'and removed '+str(nlct + othct)+' non-ACGT characters, '+
-                  str(nlct)+' of which are newlines and '+str(othct)+' of '+
-                  'which are not.')
-        with open(argv[3], 'wb') as f:
-            f.write(bwrleCompress(newS))
-        print('Successful.')
-    else:
-        print('Decompressing ' + argv[2] + '...')
-        with open(argv[2], 'rb') as f:
-            b = f.read()
-        with open(argv[3], 'w') as f:
-            f.write(bwrleDecompress(b))
-        print('Successful.')
+def setk(k):
+    global K
+    K = k

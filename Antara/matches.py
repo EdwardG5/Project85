@@ -10,7 +10,7 @@ from sys import argv
 def extractInfo(b):
     # extract necessary information from footer
     # and isolate raw BWT encoding
-    assert(K == b[-1])  # K should be the same as global K
+    # assert(K == b[-1])  # K should be the same as global K
     bpv = b[-2]
     salen = int.from_bytes(b[-2 - bpv:-2], ENDIANNESS)
     sastart = -2 - bpv - (bpv * salen)
@@ -428,6 +428,59 @@ def match(b, pattern):
     matches.sort()
     return matches
 
+def matchRunner(src, patfile, dest):
+    print('Retrieving data...')
+    with open(src, 'rb') as f:
+        b = f.read()
+    with open(patfile) as f:
+        pattern, nlct, loct, othct = removeNonACGT(f.read())
+        if nlct or loct or othct:
+            print('In ' + patfile + ', made '+str(loct)+' lowercase nucleotides uppercase, '+
+                'and removed '+str(nlct + othct)+' non-ACGT characters, '+
+                str(nlct)+' of which are newlines and '+str(othct)+' of '+
+                'which are not.')
+    pattern = 'CTAAAAA'
+    
+    print('Finding matches...')
+    matches = match(b, pattern)
+
+    print('Writing result to file...')
+    with open(dest, 'w') as f:
+        if len(matches) == 0: f.write('No matches found.')
+        else:
+            f.write(str(matches[0]))
+            for m in matches[1:]:
+                f.write('\n' + str(m))
+    print('Successful.')
+    print()
+    if len(matches) == 0:
+        print('No matches found.'); return    
+    print(str(len(matches)) + ' matches found at locations:')
+    for m in matches:
+        print(m)
+
+if __name__ == '__main__':
+    if len(argv) != 4:
+        print('Usage: python matches.py [compressed file name] [pattern file name] [destination file name]')
+    else:
+        matchRunner(argv[1], argv[2], argv[3])
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################
+# from here onward, don't include in paper
+###############################################
+
 # test with n random strings and patterns
 def testRandom(n):
     testStr = ''.join([np.random.choice(list('ACGT')) for _ in range(np.random.randint(10,20))])
@@ -454,29 +507,10 @@ def testRandom(n):
             print(testStr, testPattern)
             assert(False)
 
-if __name__ == '__main__':
-    if len(argv) != 4:
-        print('Usage: python matches.py [compressed file name] [pattern file name] [destination file name]')
-    else:
-        print('Retrieving data...')
-        with open(argv[1], 'rb') as f:
-            b = f.read()
-        with open(argv[2]) as f:
-            pattern, nlct, loct, othct = removeNonACGT(f.read())
-            if nlct or loct or othct:
-                print('In ' + argv[2] + ', made '+str(loct)+' lowercase nucleotides uppercase, '+
-                    'and removed '+str(nlct + othct)+' non-ACGT characters, '+
-                    str(nlct)+' of which are newlines and '+str(othct)+' of '+
-                    'which are not.')
-        
-        print('Finding matches...')
-        matches = match(b, pattern)
+def setk(k):
+    global K
+    K = k
 
-        print('Writing result to file...')
-        with open(argv[3], 'w') as f:
-            if len(matches) == 0: f.write('No matches found.')
-            else:
-                f.write(str(matches[0]))
-                for m in matches[1:]:
-                    f.write('\n' + str(m))
-        print('Successful.')
+def setc(c):
+    global C
+    C = c

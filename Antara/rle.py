@@ -83,10 +83,8 @@ class ModByteArray(object):
         else: return self.bytesArr + bytes([self.currByte])
 
 # rleEncode : string * int -> bytes
-# 
-# Inputs:
-#   s            The input string. ***Must contain only A, C, G, and T, and
-#                must be of length greater than 2.***
+# s must contain only A, C, G, and T, and
+# must be of length greater than 2.
 def rleEncode(s):
     assert(len(s) > 2)
     assert(1 <= NUM_LEN_BITS <= 8)
@@ -155,11 +153,7 @@ def rleEncode(s):
     return bytes(res.get())
 
 # rleDecode : bytes * int -> string
-#  
-# Inputs:
-#   b            The input bytes object. Must have no zero padding at end,
-#                in other words, b[-1] != 0. Should be returned from rleEncode.
-# requires that input was returned from rle
+# requires that input was returned from rleEncode
 # and b has no zero padding at the end (final byte != 0)
 def rleDecode(b):
     encoding = dict(zip(range(4), 'ACGT'))
@@ -204,6 +198,17 @@ def rleDecode(b):
         justRan = False
     return res
 
+
+
+
+
+
+
+
+
+###############################################
+# from here onward, don't include in paper
+###############################################
 
 # tests encoder and decoder on n random strings
 def testRandom(n):
