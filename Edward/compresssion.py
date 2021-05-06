@@ -1,3 +1,10 @@
+# README: Legacy code. 
+
+# This was an earlier attempt at creating a compression scheme, which I think
+# processed a multiple alignment directly??? Probably not worth reading through
+# this. I think there might be a few functions which might be useful to reuse
+# which is why I'm keeping the file around. 
+
 from math import ceil
 from collections import Counter
 
