@@ -1,8 +1,6 @@
-
-
-###############################################
-# don't include this file in paper
-###############################################
+# This file contains code that finds the number of occurrences
+# of a pattern in a compressed file. Only compatible with the format
+# in the "bwrleFF.py" file.
 
 from params import NUM_LEN_BITS, C, itoc, ctoi
 from params import getDigits, getFirstOccurrence
