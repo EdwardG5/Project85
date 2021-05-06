@@ -1,3 +1,5 @@
+# This file contains code for a simple run-length encoder.
+
 from params import ENDIANNESS, NUM_LEN_BITS
 from params import getDigits
 
@@ -207,7 +209,7 @@ def rleDecode(b):
 
 
 ###############################################
-# from here onward, don't include in paper
+# for debugging purposes
 ###############################################
 
 # tests encoder and decoder on n random strings

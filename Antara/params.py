@@ -1,3 +1,6 @@
+# Parameters used by "rle.py", "bwrleCF.py", "bwrleFF.py", "occurrences.py",
+# and "matches.py".
+
 
 ENDIANNESS = 'big'  # default endianness for storing integers
 NUM_LEN_BITS = 1    # number of bits used to store run lengths
@@ -78,7 +81,7 @@ def removeNonACGT(s):
 
 
 ###############################################
-# from here onward, don't include in paper
+# for debugging purposes
 ###############################################
 
 def getBWT(s):

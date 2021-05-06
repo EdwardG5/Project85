@@ -1,9 +1,6 @@
-
-
-###############################################
-# don't include this file in paper
-###############################################
-
+# This file has the code for a version of BWRLE compressor that doesn't
+# store the suffix array along with the compressed data.
+# Not compatible with "matches.py", but it is compatible with "occurrences.py"
 
 from params import getTypeSize, removeNonACGT
 import rle

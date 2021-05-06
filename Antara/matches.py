@@ -1,3 +1,7 @@
+# This file contains code that finds the indices of matches of patterns
+# based on the data in a compressed file.
+# Only compatible with the compressed format from "bwrleFF.py".
+
 from params import ENDIANNESS, NUM_LEN_BITS, K, C, itoc, ctoi
 from params import getDigits, getFirstOccurrence, removeNonACGT
 from params import printBWProperties

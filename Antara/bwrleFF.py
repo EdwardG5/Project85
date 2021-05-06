@@ -1,3 +1,7 @@
+# This file has the code for a version of BWRLE compressor that
+# stores the suffix array along with the compressed data.
+# Not compatible with "occurrences.py", but it is compatible with "matches.py"
+
 from params import NUM_LEN_BITS, ENDIANNESS, K
 from params import getTypeSize, removeNonACGT
 import rle
@@ -144,17 +148,8 @@ if __name__ == '__main__':
         decompress(argv[2], argv[3])
 
 
-
-
-
-
-
-
-
-
-
 ###############################################
-# from here onward, don't include in paper
+# for debugging
 ###############################################
 
 # tests on n random strings
