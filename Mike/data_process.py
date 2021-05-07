@@ -120,6 +120,32 @@ def download_org(data_payload, retries=0):
             download_org(org, retries+1)
     return True
 
+import gzip 
+import shutil
+import os
+import fnmatch
+
+# gunzip and gunzip recurse taken and modified from 
+# https://stackoverflow.com/questions/45596742/unzip-gz-files-within-folders-in-a-main-folder-using-python
+
+# Accepts a file path to a .gz file
+# Decompresses the file, and replaces it with the decompressed file, named the same (minus .gz)
+def gunzip(compressedFilePath):
+    assert(compressedFilePath[-3:] == ".gz")
+    outPath = compressedFilePath[:-3]
+    with gzip.open(compressedFilePath,"rb") as f_in, open(outPath,"wb") as f_out:
+        shutil.copyfileobj(f_in, f_out)
+        os.remove(compressedFilePath) # Delete the file
+
+# Accepts a path to a directory
+# Decompresses all .gz files in the directory.
+def recurse_and_gunzip(root):
+    walker = os.walk(root)
+    for root,dirs,files in walker:
+        for f in files:
+            if fnmatch.fnmatch(f,"*.gz"):
+                print(f"Decompressing {f}...")
+                gunzip(root+"/"+f)
 
 def download_dataset(dataset_dir, dest=None, procs=1, retry=1):
     import requests
@@ -145,14 +171,20 @@ def download_dataset(dataset_dir, dest=None, procs=1, retry=1):
 
     with open(dataset_dir, "r") as f:
 
-        print("Reading dataset...")
+        print("Reading dataset...\n")
         organisms = [o for o in f.read().split("\n") if o != '']
         retry_generator = [retry for _ in range(len(organisms))]
         dataset_generator = [dataset_folder for _ in range(len(organisms))]
         from multiprocessing import Pool
+        print("Beginning downloads...\n")
         pool = Pool(procs)
         pool.map(download_org, zip(
             organisms, retry_generator, dataset_generator))
+        print("Downloading finished.\n")
+
+    print("Beginning file decompression...\n")
+    recurse_and_gunzip(dataset_folder)
+    print("\nFile decompression complete.\n")
 
     from shutil import copyfile
     copyfile(dataset_dir, os.path.join(
